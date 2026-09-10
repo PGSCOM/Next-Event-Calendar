@@ -37,5 +37,64 @@
       <range min="10" max="900"/>
     </key>
 
+    <key name="time-display" type="s">
+      <default>'smart'</default>
+      <summary>Time Display</summary>
+      <description>Show the absolute time ('absolute'), a relative countdown ('relative'), or the countdown only once the event is near and the absolute time otherwise ('smart').</description>
+      <choices>
+        <choice value="absolute"/>
+        <choice value="relative"/>
+        <choice value="smart"/>
+      </choices>
+    </key>
+
+    <key name="text-hierarchy" type="b">
+      <default>true</default>
+      <summary>Text Hierarchy</summary>
+      <description>Show the time in bold with a dimmed title. When false, time and title are rendered as one flat string separated by a middle dot.</description>
+    </key>
+
+    <key name="accent-time" type="b">
+      <default>true</default>
+      <summary>Accent-coloured Time</summary>
+      <description>Tint the time with the system accent colour once the event is near.</description>
+    </key>
+
+    <key name="tonal-surface" type="b">
+      <default>true</default>
+      <summary>Tonal Surface</summary>
+      <description>Draw a faint accent-tinted surface behind the indicator once the event is imminent.</description>
+    </key>
+
+    <key name="emphasis-mode" type="s">
+      <default>'urgency'</default>
+      <summary>Emphasis Mode</summary>
+      <description>Scale the emphasis as the event approaches ('urgency'), or apply the near-event emphasis constantly ('always').</description>
+      <choices>
+        <choice value="urgency"/>
+        <choice value="always"/>
+      </choices>
+    </key>
+
+    <key name="soon-minutes" type="i">
+      <default>15</default>
+      <summary>Soon Threshold (minutes)</summary>
+      <description>Minutes before the event at which it counts as 'soon': the time switches to a relative countdown and, if enabled, takes the accent colour.</description>
+      <range min="1" max="240"/>
+    </key>
+
+    <key name="imminent-minutes" type="i">
+      <default>5</default>
+      <summary>Imminent Threshold (minutes)</summary>
+      <description>Minutes before the event at which it counts as 'imminent': the tonal surface appears, if enabled.</description>
+      <range min="1" max="120"/>
+    </key>
+
+    <key name="show-ongoing" type="b">
+      <default>false</default>
+      <summary>Show Ongoing Event</summary>
+      <description>While an event is in progress, keep showing it (marked as ongoing) instead of moving on to the next one.</description>
+    </key>
+
   </schema>
 </schemalist>

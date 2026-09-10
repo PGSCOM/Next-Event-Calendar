@@ -1,3 +1,43 @@
-.next-event-calendar-label {
-    padding: 0 6px;
+/* Next Event Calendar — panel indicator.
+ *
+ * Every selector carries "#panel .panel-button" so it outweighs the shell
+ * theme's own ".panel-button" rules; a lone class loses on specificity and
+ * the theme would win. Colours come from the system accent (-st-accent-color),
+ * so the widget tracks whatever the user picked in Settings and never needs a
+ * hardcoded palette. The tonal surface reuses the theme's own hover idiom:
+ * an inset box-shadow flooding the rounded box, not a background-color. */
+
+.next-event-calendar-box {
+    spacing: 5px;
+}
+
+/* --- Text hierarchy: bold time, dimmed title, separator hidden ----------- */
+
+#panel .panel-button.next-event-calendar.nec-hierarchy .nec-time {
+    font-weight: bold;
+}
+
+#panel .panel-button.next-event-calendar.nec-hierarchy .nec-title {
+    opacity: 0.72;
+}
+
+/* --- Accent-coloured time once the event is near ------------------------- */
+
+#panel .panel-button.next-event-calendar.nec-accent.nec-soon .nec-time,
+#panel .panel-button.next-event-calendar.nec-accent.nec-imminent .nec-time,
+#panel .panel-button.next-event-calendar.nec-accent.nec-ongoing .nec-time {
+    color: -st-accent-color;
+}
+
+/* --- Tonal surface once the event is imminent --------------------------- */
+
+#panel .panel-button.next-event-calendar.nec-surface.nec-imminent,
+#panel .panel-button.next-event-calendar.nec-surface.nec-ongoing {
+    box-shadow: inset 0 0 0 100px st-transparentize(-st-accent-color, 0.86);
+    transition-duration: 200ms;
+}
+
+#panel .panel-button.next-event-calendar.nec-surface.nec-imminent:hover,
+#panel .panel-button.next-event-calendar.nec-surface.nec-ongoing:hover {
+    box-shadow: inset 0 0 0 100px st-transparentize(-st-accent-color, 0.74);
 }

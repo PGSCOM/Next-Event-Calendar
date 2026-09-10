@@ -1,11 +1,30 @@
 import Adw from 'gi://Adw';
 import Gio from 'gi://Gio';
-import GLib from 'gi://GLib';
 import Gtk from 'gi://Gtk';
 
 import {ExtensionPreferences, gettext as _} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
 const PANEL_POSITIONS = ['far-left', 'left', 'clock-left', 'clock-right', 'right', 'far-right'];
+const TIME_MODES = ['absolute', 'relative', 'smart'];
+const EMPHASIS_MODES = ['urgency', 'always'];
+
+// Preset name -> the full set of detail keys it writes. Both presets pin every
+// key (even the ones a mode ignores) so _matchPreset can compare exactly.
+const PRESET_NAMES = ['simple', 'prominent'];
+const PRESETS = {
+    simple: {
+        'time-display': 'absolute', 'text-hierarchy': false, 'accent-time': false,
+        'tonal-surface': false, 'emphasis-mode': 'urgency',
+        'soon-minutes': 15, 'imminent-minutes': 5, 'show-ongoing': false,
+    },
+    prominent: {
+        'time-display': 'smart', 'text-hierarchy': true, 'accent-time': true,
+        'tonal-surface': true, 'emphasis-mode': 'urgency',
+        'soon-minutes': 15, 'imminent-minutes': 5, 'show-ongoing': true,
+    },
+};
+const PRESET_KEYS = Object.keys(PRESETS.simple);
+const PRESET_CUSTOM = PRESET_NAMES.length; // combo index for "Custom"
 
 // ponytail: gdbus text-scrape síncrono; pasar a Gio.DBus async + deep_unpack
 // si el diálogo de preferencias llega a colgarse o si "Sources5" sube de versión.
@@ -127,16 +146,23 @@ export default class NextEventCalendarPreferences extends ExtensionPreferences {
         });
         calGroup.add(calRow);
 
+        const ongoingRow = new Adw.SwitchRow({
+            title: _('Show ongoing event'),
+            subtitle: _('Keep showing an event while it is in progress instead of moving on'),
+        });
+        settings.bind('show-ongoing', ongoingRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        calGroup.add(ongoingRow);
+
         // --- Panel group ---
         const panelGroup = new Adw.PreferencesGroup({
             title: _('Panel'),
-            description: _('Configure position in the top bar'),
+            description: _('Where the indicator sits in the top bar'),
         });
         page.add(panelGroup);
 
         const posRow = new Adw.ComboRow({
             title: _('Panel position'),
-            subtitle: _('Where to place the indicator in the top bar'),
+            subtitle: _('Anchored to real panel elements, not a raw index'),
             model: Gtk.StringList.new([
                 _('Far left'),
                 _('Left'),
@@ -146,31 +172,17 @@ export default class NextEventCalendarPreferences extends ExtensionPreferences {
                 _('Far right'),
             ]),
         });
-        const currentPos = settings.get_string('panel-position');
-        posRow.set_selected(Math.max(0, PANEL_POSITIONS.indexOf(currentPos)));
+        posRow.set_selected(Math.max(0, PANEL_POSITIONS.indexOf(settings.get_string('panel-position'))));
         posRow.connect('notify::selected', row => {
             settings.set_string('panel-position', PANEL_POSITIONS[row.get_selected()]);
         });
         panelGroup.add(posRow);
 
-        // --- Appearance group ---
-        const appGroup = new Adw.PreferencesGroup({
-            title: _('Appearance'),
+        // --- Update group ---
+        const updateGroup = new Adw.PreferencesGroup({
+            title: _('Updating'),
         });
-        page.add(appGroup);
-
-        const maxLenRow = new Adw.SpinRow({
-            title: _('Max title length'),
-            subtitle: _('Truncate event titles longer than this'),
-            adjustment: new Gtk.Adjustment({
-                lower: 10,
-                upper: 120,
-                step_increment: 1,
-                page_increment: 5,
-            }),
-        });
-        settings.bind('max-title-length', maxLenRow, 'value', Gio.SettingsBindFlags.DEFAULT);
-        appGroup.add(maxLenRow);
+        page.add(updateGroup);
 
         const refreshRow = new Adw.SpinRow({
             title: _('Refresh interval (seconds)'),
@@ -183,6 +195,167 @@ export default class NextEventCalendarPreferences extends ExtensionPreferences {
             }),
         });
         settings.bind('refresh-interval-seconds', refreshRow, 'value', Gio.SettingsBindFlags.DEFAULT);
-        appGroup.add(refreshRow);
+        updateGroup.add(refreshRow);
+
+        this._fillAppearancePage(window, settings);
+    }
+
+    _fillAppearancePage(window, settings) {
+        const page = new Adw.PreferencesPage({
+            title: _('Appearance'),
+            icon_name: 'preferences-desktop-appearance-symbolic',
+        });
+        window.add(page);
+
+        // enum ComboRow bound to a string key (settings.bind can't do enums)
+        const comboEnum = (title, subtitle, key, values, labels) => {
+            const row = new Adw.ComboRow({
+                title, subtitle, model: Gtk.StringList.new(labels),
+            });
+            row.set_selected(Math.max(0, values.indexOf(settings.get_string(key))));
+            row.connect('notify::selected', r => settings.set_string(key, values[r.get_selected()]));
+            return row;
+        };
+
+        // --- Preset group ---
+        const presetGroup = new Adw.PreferencesGroup({
+            title: _('Preset'),
+            description: _('A quiet default, a bold configured look, or your own mix'),
+        });
+        page.add(presetGroup);
+
+        const presetRow = new Adw.ComboRow({
+            title: _('Style preset'),
+            model: Gtk.StringList.new([_('Simple'), _('Prominent'), _('Custom')]),
+        });
+        const matchPreset = () => {
+            for (let i = 0; i < PRESET_NAMES.length; i++) {
+                const p = PRESETS[PRESET_NAMES[i]];
+                const hit = PRESET_KEYS.every(k => {
+                    const v = p[k];
+                    if (typeof v === 'boolean')
+                        return settings.get_boolean(k) === v;
+                    if (typeof v === 'number')
+                        return settings.get_int(k) === v;
+                    return settings.get_string(k) === v;
+                });
+                if (hit)
+                    return i;
+            }
+            return PRESET_CUSTOM;
+        };
+        presetRow.set_selected(matchPreset());
+        presetRow.connect('notify::selected', row => {
+            const idx = row.get_selected();
+            if (idx >= PRESET_CUSTOM)
+                return;
+            const p = PRESETS[PRESET_NAMES[idx]];
+            for (const k of PRESET_KEYS) {
+                const v = p[k];
+                if (typeof v === 'boolean')
+                    settings.set_boolean(k, v);
+                else if (typeof v === 'number')
+                    settings.set_int(k, v);
+                else
+                    settings.set_string(k, v);
+            }
+        });
+        presetGroup.add(presetRow);
+
+        // Any detail change re-derives which preset (or Custom) is shown.
+        const watched = new Set(PRESET_KEYS);
+        const syncId = settings.connect('changed', (_s, key) => {
+            if (!watched.has(key))
+                return;
+            const want = matchPreset();
+            if (presetRow.get_selected() !== want)
+                presetRow.set_selected(want);
+        });
+        window.connect('close-request', () => settings.disconnect(syncId));
+
+        // --- Text group ---
+        const textGroup = new Adw.PreferencesGroup({
+            title: _('Text'),
+        });
+        page.add(textGroup);
+
+        textGroup.add(comboEnum(
+            _('Time display'),
+            _('Absolute time, a relative countdown, or the countdown only when near'),
+            'time-display', TIME_MODES,
+            [_('Absolute'), _('Countdown'), _('Smart')]));
+
+        const hierarchyRow = new Adw.SwitchRow({
+            title: _('Typographic hierarchy'),
+            subtitle: _('Bold time with a dimmed title, instead of one flat string'),
+        });
+        settings.bind('text-hierarchy', hierarchyRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        textGroup.add(hierarchyRow);
+
+        const maxLenRow = new Adw.SpinRow({
+            title: _('Max title length'),
+            subtitle: _('Truncate event titles longer than this'),
+            adjustment: new Gtk.Adjustment({
+                lower: 10,
+                upper: 120,
+                step_increment: 1,
+                page_increment: 5,
+            }),
+        });
+        settings.bind('max-title-length', maxLenRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        textGroup.add(maxLenRow);
+
+        // --- Emphasis group ---
+        const emphasisGroup = new Adw.PreferencesGroup({
+            title: _('Emphasis'),
+            description: _('How the widget gains presence as the event approaches'),
+        });
+        page.add(emphasisGroup);
+
+        const accentRow = new Adw.SwitchRow({
+            title: _('Accent-coloured time'),
+            subtitle: _('Tint the time with the system accent colour once the event is near'),
+        });
+        settings.bind('accent-time', accentRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        emphasisGroup.add(accentRow);
+
+        const surfaceRow = new Adw.SwitchRow({
+            title: _('Tonal surface'),
+            subtitle: _('A faint tinted surface behind the widget once the event is imminent'),
+        });
+        settings.bind('tonal-surface', surfaceRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        emphasisGroup.add(surfaceRow);
+
+        emphasisGroup.add(comboEnum(
+            _('When'),
+            _('Scale the emphasis as the event nears, or apply it constantly'),
+            'emphasis-mode', EMPHASIS_MODES,
+            [_('As the event nears'), _('Always')]));
+
+        const thresholds = new Adw.ExpanderRow({
+            title: _('Thresholds'),
+            subtitle: _('When an event counts as soon and as imminent'),
+        });
+        emphasisGroup.add(thresholds);
+
+        const soonRow = new Adw.SpinRow({
+            title: _('Soon (minutes)'),
+            subtitle: _('Switches to the countdown and, if enabled, the accent colour'),
+            adjustment: new Gtk.Adjustment({
+                lower: 1, upper: 240, step_increment: 1, page_increment: 5,
+            }),
+        });
+        settings.bind('soon-minutes', soonRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        thresholds.add_row(soonRow);
+
+        const imminentRow = new Adw.SpinRow({
+            title: _('Imminent (minutes)'),
+            subtitle: _('Brings up the tonal surface, if enabled'),
+            adjustment: new Gtk.Adjustment({
+                lower: 1, upper: 120, step_increment: 1, page_increment: 5,
+            }),
+        });
+        settings.bind('imminent-minutes', imminentRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        thresholds.add_row(imminentRow);
     }
 }

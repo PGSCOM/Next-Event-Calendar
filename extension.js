@@ -36,6 +36,10 @@ export default class NextEventCalendarExtension extends Extension {
         this._label = null;
         this._indicator = null;
 
+        this._timeLabel = null;
+        this._sepLabel = null;
+        this._titleLabel = null;
+
         this._createIndicator();
         this._createEventSource();
         this._startTimer();
@@ -72,7 +76,9 @@ export default class NextEventCalendarExtension extends Extension {
             this._indicator = null;
         }
 
-        this._label = null;
+        this._timeLabel = null;
+        this._sepLabel = null;
+        this._titleLabel = null;
         this._settings = null;
     }
 
@@ -89,13 +95,24 @@ export default class NextEventCalendarExtension extends Extension {
 
         this._indicator = new PanelMenu.Button(0.5, this.uuid, false);
 
-        this._label = new St.Label({
+        const mkLabel = styleClass => new St.Label({
             text: '',
             y_align: Clutter.ActorAlign.CENTER,
-            style_class: 'system-status-label next-event-calendar-label',
+            style_class: styleClass,
         });
+        this._timeLabel = mkLabel('nec-time');
+        this._sepLabel = mkLabel('nec-sep');
+        this._sepLabel.set_text('·');
+        this._titleLabel = mkLabel('nec-title');
 
-        this._indicator.add_child(this._label);
+        const hbox = new St.BoxLayout({
+            style_class: 'next-event-calendar-box',
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        hbox.add_child(this._timeLabel);
+        hbox.add_child(this._sepLabel);
+        hbox.add_child(this._titleLabel);
+        this._indicator.add_child(hbox);
 
         try {
             Main.panel.addToStatusArea(this.uuid, this._indicator, index, box);
@@ -114,7 +131,9 @@ export default class NextEventCalendarExtension extends Extension {
             console.error(`[${this.uuid}] Failed to add indicator at '${position}': ${e.message}`);
             this._indicator?.destroy();
             this._indicator = null;
-            this._label = null;
+            this._timeLabel = null;
+            this._sepLabel = null;
+            this._titleLabel = null;
             return;
         }
 
@@ -123,10 +142,26 @@ export default class NextEventCalendarExtension extends Extension {
         }
     }
 
-    _showIndicator(text) {
-        if (!this._indicator || !this._label)
+    // state: 'nec-normal' | 'nec-soon' | 'nec-imminent' | 'nec-ongoing'
+    _render(timeStr, titleStr, state) {
+        if (!this._indicator || !this._timeLabel)
             return;
-        this._label.set_text(text);
+
+        const hierarchy = this._settings?.get_boolean('text-hierarchy') ?? true;
+        const accent = this._settings?.get_boolean('accent-time') ?? true;
+        const surface = this._settings?.get_boolean('tonal-surface') ?? true;
+
+        this._timeLabel.set_text(timeStr);
+        this._titleLabel.set_text(titleStr);
+        this._sepLabel.visible = !hierarchy;
+
+        this._indicator.set_style_class_name(
+            ['panel-button', 'next-event-calendar', state,
+             hierarchy && 'nec-hierarchy',
+             accent && 'nec-accent',
+             surface && 'nec-surface']
+            .filter(Boolean).join(' '));
+
         if (!this._indicator.visible)
             this._indicator.show();
     }
@@ -188,10 +223,21 @@ export default class NextEventCalendarExtension extends Extension {
             this._scheduleRebuild();
         };
 
+        const restyle = () => this._requestRefresh();
+
         this._settingsIds.push(
             this._settings.connect('changed::panel-position', reconnect),
-            this._settings.connect('changed::calendar-uid', () => this._requestRefresh()),
             this._settings.connect('changed::refresh-interval-seconds', () => this._startTimer()),
+            this._settings.connect('changed::calendar-uid', restyle),
+            this._settings.connect('changed::max-title-length', restyle),
+            this._settings.connect('changed::time-display', restyle),
+            this._settings.connect('changed::text-hierarchy', restyle),
+            this._settings.connect('changed::accent-time', restyle),
+            this._settings.connect('changed::tonal-surface', restyle),
+            this._settings.connect('changed::emphasis-mode', restyle),
+            this._settings.connect('changed::soon-minutes', restyle),
+            this._settings.connect('changed::imminent-minutes', restyle),
+            this._settings.connect('changed::show-ongoing', restyle),
         );
     }
 
@@ -238,10 +284,10 @@ export default class NextEventCalendarExtension extends Extension {
     }
 
     _refresh() {
-        if (!this._label || !this._eventSource || !this._indicator)
+        if (!this._timeLabel || !this._eventSource || !this._indicator)
             return;
 
-        const now = new Date();
+        const nowMs = Date.now();
         const [todayStart, todayEnd] = this._getTodayRange();
 
         let events = this._eventSource.getEvents(todayStart, todayEnd) || [];
@@ -254,28 +300,75 @@ export default class NextEventCalendarExtension extends Extension {
             });
         }
 
-        const futureEvents = events
-            .filter(ev => ev.date.getTime() > now.getTime())
+        const showOngoing = this._settings?.get_boolean('show-ongoing') ?? false;
+        const candidates = events
+            .filter(ev => showOngoing
+                ? (ev.end?.getTime() ?? ev.date.getTime()) > nowMs
+                : ev.date.getTime() > nowMs)
             .sort((a, b) => a.date.getTime() - b.date.getTime());
 
-        if (futureEvents.length === 0) {
+        if (candidates.length === 0) {
             this._hideIndicator();
             return;
         }
 
-        const next = futureEvents[0];
-        const timeStr = this._formatTime(next.date);
-        const maxLen = this._settings?.get_int('max-title-length') ?? MAX_TITLE_DEFAULT;
+        const next = candidates[0];
+        const ongoing = showOngoing && next.date.getTime() <= nowMs;
+        const minutesUntil = Math.max(0, Math.round((next.date.getTime() - nowMs) / 60000));
 
+        const soonMin = this._settings?.get_int('soon-minutes') ?? 15;
+        const imminentMin = this._settings?.get_int('imminent-minutes') ?? 5;
+        const emphasis = this._settings?.get_string('emphasis-mode') ?? 'urgency';
+
+        let state;
+        if (ongoing)
+            state = 'nec-ongoing';
+        else if (minutesUntil <= imminentMin)
+            state = 'nec-imminent';
+        else if (minutesUntil <= soonMin || emphasis === 'always')
+            state = 'nec-soon';
+        else
+            state = 'nec-normal';
+
+        const timeMode = this._settings?.get_string('time-display') ?? 'smart';
+        let relative;
+        if (timeMode === 'relative')
+            relative = true;
+        else if (timeMode === 'absolute')
+            relative = false;
+        else
+            relative = minutesUntil <= soonMin;
+
+        let timeStr;
+        if (ongoing)
+            timeStr = _('now');
+        else if (relative)
+            timeStr = this._formatRelative(minutesUntil);
+        else
+            timeStr = this._formatTime(next.date);
+
+        const maxLen = this._settings?.get_int('max-title-length') ?? MAX_TITLE_DEFAULT;
         let title = next.summary || _('Untitled');
         if (title.length > maxLen)
             title = title.substring(0, maxLen - 1) + '\u2026';
 
-        this._showIndicator(`${timeStr} \u00b7 ${title}`);
+        this._render(timeStr, title, state);
     }
 
     _formatTime(date) {
         return date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+    }
+
+    _formatRelative(minutes) {
+        if (minutes < 1)
+            return _('now');
+        if (minutes < 60)
+            return `${_('in')} ${minutes} min`;
+        const h = Math.floor(minutes / 60);
+        const m = minutes % 60;
+        return m === 0
+            ? `${_('in')} ${h} h`
+            : `${_('in')} ${h} h ${m} min`;
     }
 
     // --- Open Calendar --------------------------------------------------------

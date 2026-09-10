@@ -11,8 +11,8 @@ Server / Cuentas en línea), sin dependencias ni typelibs extra.
 
 ## Requisitos
 
-- GNOME Shell **45 a 50** (probado en 50; en 45–49 debería funcionar pero no
-  está verificado).
+- GNOME Shell **47 a 50** (probado en 50; en 47–49 debería funcionar pero no
+  está verificado). El énfasis con el color de acento del sistema es 47+.
 - Al menos un calendario configurado en **Configuración → Cuentas en línea**
   o en la app **GNOME Calendar**.
 - Herramientas de línea de comandos: `glib-compile-schemas` y
@@ -76,16 +76,32 @@ Recarga la sesión y actívala con `gnome-extensions enable …`.
 gnome-extensions prefs next-event-calendar@gnome-shell-extension
 ```
 
-O desde la app **Extensiones** → *Next Event Calendar* → engranaje.
+O desde la app **Extensiones** → *Next Event Calendar* → engranaje. Hay dos páginas.
+
+**General**
 
 | Ajuste | Por defecto | Qué hace |
 |---|---|---|
 | Calendario | Todos | Muestra eventos solo de ese calendario de EDS |
+| Mostrar evento en curso | No | Sigue mostrando el evento mientras ocurre, en vez de saltar al siguiente |
 | Posición en el panel | Derecha | Extremo izq. / izquierda / a la izq. del reloj / a la der. del reloj / derecha / extremo der. |
-| Largo máx. de título | 35 | Trunca títulos más largos con `…` |
 | Intervalo de refresco | 60 s | Cada cuánto se reevalúa el próximo evento |
 
-Los cambios de posición y de calendario se aplican **sin recargar** la shell.
+**Apariencia**: un preajuste rápido más el detalle.
+
+| Ajuste | Por defecto | Qué hace |
+|---|---|---|
+| Preajuste | *(según el resto)* | **Simple**: el aspecto plano de siempre. **Destacado**: jerarquía + acento + superficie. **Personalizado**: tu mezcla |
+| Formato de hora | Inteligente | Hora absoluta, cuenta atrás, o cuenta atrás solo cuando falta poco |
+| Jerarquía tipográfica | Sí | Hora en negrita con el título atenuado, en vez de una cadena plana con `·` |
+| Largo máx. de título | 35 | Trunca títulos más largos con `…` |
+| Hora con color de acento | Sí | Tiñe la hora con el acento del sistema cuando el evento está cerca |
+| Superficie tonal | Sí | Fondo tenue tras el widget cuando el evento es inminente |
+| Énfasis: cuándo | Según se acerca | Escalar según se acerca el evento, o aplicarlo siempre |
+| Umbrales | 15 / 5 min | Minutos a los que el evento cuenta como *pronto* y como *inminente* |
+
+Todos los cambios de apariencia y de calendario se aplican **sin recargar** la shell.
+La posición del panel también, salvo en Wayland la primera carga.
 
 ---
 

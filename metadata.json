@@ -4,6 +4,6 @@
   "description": "Shows your next upcoming calendar event in the top panel. Reads from GNOME Online Accounts / Evolution Data Server. Hide when no more events today.",
   "settings-schema": "org.gnome.shell.extensions.next-event-calendar",
   "version": 1,
-  "shell-version": ["45", "46", "47", "48", "49", "50"],
+  "shell-version": ["47", "48", "49", "50"],
   "url": ""
 }
