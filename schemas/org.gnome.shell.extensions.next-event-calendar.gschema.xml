@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="next-event-calendar">
+  <schema id="org.gnome.shell.extensions.next-event-calendar"
+          path="/org/gnome/shell/extensions/next-event-calendar/">
+
+    <key name="calendar-uid" type="s">
+      <default>'ALL'</default>
+      <summary>Calendar UID</summary>
+      <description>The UID of the Evolution Data Server calendar source to show events from. Use 'ALL' to show events from all calendars.</description>
+    </key>
+
+    <key name="panel-box" type="s">
+      <default>'right'</default>
+      <summary>Panel Box</summary>
+      <description>Which panel box to place the indicator in (left, center, or right).</description>
+      <choices>
+        <choice value="left"/>
+        <choice value="center"/>
+        <choice value="right"/>
+      </choices>
+    </key>
+
+    <key name="panel-order" type="i">
+      <default>0</default>
+      <summary>Panel Order</summary>
+      <description>Position index within the selected panel box.</description>
+      <range min="0" max="20"/>
+    </key>
+
+    <key name="max-title-length" type="i">
+      <default>35</default>
+      <summary>Max Title Length</summary>
+      <description>Maximum number of characters for the event title before truncating.</description>
+      <range min="10" max="120"/>
+    </key>
+
+    <key name="refresh-interval-seconds" type="u">
+      <default>60</default>
+      <summary>Refresh Interval (seconds)</summary>
+      <description>How often to check for upcoming events, in seconds.</description>
+      <range min="10" max="900"/>
+    </key>
+
+  </schema>
+</schemalist>
