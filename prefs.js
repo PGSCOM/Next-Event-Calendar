@@ -6,7 +6,6 @@ import Gtk from 'gi://Gtk';
 import {ExtensionPreferences, gettext as _} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
 const PANEL_BOXES = ['left', 'center', 'right'];
-const PANEL_BOX_LABELS = [_('Left'), _('Center'), _('Right')];
 
 // ponytail: gdbus text-scrape síncrono; pasar a Gio.DBus async + deep_unpack
 // si el diálogo de preferencias llega a colgarse o si "Sources5" sube de versión.
@@ -138,7 +137,7 @@ export default class NextEventCalendarPreferences extends ExtensionPreferences {
         const boxRow = new Adw.ComboRow({
             title: _('Panel position'),
             subtitle: _('Which section of the top panel'),
-            model: Gtk.StringList.new(PANEL_BOX_LABELS),
+            model: Gtk.StringList.new([_('Left'), _('Center'), _('Right')]),
         });
         const currentBox = settings.get_string('panel-box');
         boxRow.set_selected(Math.max(0, PANEL_BOXES.indexOf(currentBox)));
