@@ -81,8 +81,7 @@ O desde la app **Extensiones** → *Next Event Calendar* → engranaje.
 | Ajuste | Por defecto | Qué hace |
 |---|---|---|
 | Calendario | Todos | Muestra eventos solo de ese calendario de EDS |
-| Posición en el panel | Derecha | `left` / `center` / `right` |
-| Orden | 0 | Índice dentro de esa zona del panel |
+| Posición en el panel | Derecha | Extremo izq. / izquierda / a la izq. del reloj / a la der. del reloj / derecha / extremo der. |
 | Largo máx. de título | 35 | Trunca títulos más largos con `…` |
 | Intervalo de refresco | 60 s | Cada cuánto se reevalúa el próximo evento |
 

@@ -13,6 +13,17 @@ const MAX_TITLE_DEFAULT = 35;
 const REFRESH_DEFAULT = 60;
 const REBUILD_DELAY = 500;
 
+// position -> [panel box, index]. -1 means append. The two clock-* values land
+// in the center box and are then reordered relative to the clock (dateMenu).
+const PANEL_POSITIONS = {
+    'far-left': ['left', 0],
+    'left': ['left', -1],
+    'clock-left': ['center', 0],
+    'clock-right': ['center', 0],
+    'right': ['right', 0],
+    'far-right': ['right', -1],
+};
+
 export default class NextEventCalendarExtension extends Extension {
     enable() {
         this._settings = this.getSettings();
@@ -73,8 +84,8 @@ export default class NextEventCalendarExtension extends Extension {
             this._indicator = null;
         }
 
-        const order = this._settings?.get_int('panel-order') ?? 0;
-        const box = this._settings?.get_string('panel-box') ?? 'right';
+        const position = this._settings?.get_string('panel-position') ?? 'right';
+        const [box, index] = PANEL_POSITIONS[position] ?? PANEL_POSITIONS['right'];
 
         this._indicator = new PanelMenu.Button(0.5, this.uuid, false);
 
@@ -85,7 +96,27 @@ export default class NextEventCalendarExtension extends Extension {
         });
 
         this._indicator.add_child(this._label);
-        Main.panel.addToStatusArea(this.uuid, this._indicator, order, box);
+
+        try {
+            Main.panel.addToStatusArea(this.uuid, this._indicator, index, box);
+
+            if (position === 'clock-left' || position === 'clock-right') {
+                const clock = Main.panel.statusArea.dateMenu?.container;
+                const parent = this._indicator.container.get_parent();
+                if (clock && parent) {
+                    if (position === 'clock-left')
+                        parent.set_child_below_sibling(this._indicator.container, clock);
+                    else
+                        parent.set_child_above_sibling(this._indicator.container, clock);
+                }
+            }
+        } catch (e) {
+            console.error(`[${this.uuid}] Failed to add indicator at '${position}': ${e.message}`);
+            this._indicator?.destroy();
+            this._indicator = null;
+            this._label = null;
+            return;
+        }
 
         if (this._indicator?.menu) {
             this._indicator.menu.addAction(_('Open Calendar'), () => this._openCalendar());
@@ -158,8 +189,7 @@ export default class NextEventCalendarExtension extends Extension {
         };
 
         this._settingsIds.push(
-            this._settings.connect('changed::panel-box', reconnect),
-            this._settings.connect('changed::panel-order', reconnect),
+            this._settings.connect('changed::panel-position', reconnect),
             this._settings.connect('changed::calendar-uid', () => this._requestRefresh()),
             this._settings.connect('changed::refresh-interval-seconds', () => this._startTimer()),
         );

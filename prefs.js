@@ -5,7 +5,7 @@ import Gtk from 'gi://Gtk';
 
 import {ExtensionPreferences, gettext as _} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
-const PANEL_BOXES = ['left', 'center', 'right'];
+const PANEL_POSITIONS = ['far-left', 'left', 'clock-left', 'clock-right', 'right', 'far-right'];
 
 // ponytail: gdbus text-scrape síncrono; pasar a Gio.DBus async + deep_unpack
 // si el diálogo de preferencias llega a colgarse o si "Sources5" sube de versión.
@@ -134,30 +134,24 @@ export default class NextEventCalendarPreferences extends ExtensionPreferences {
         });
         page.add(panelGroup);
 
-        const boxRow = new Adw.ComboRow({
+        const posRow = new Adw.ComboRow({
             title: _('Panel position'),
-            subtitle: _('Which section of the top panel'),
-            model: Gtk.StringList.new([_('Left'), _('Center'), _('Right')]),
+            subtitle: _('Where to place the indicator in the top bar'),
+            model: Gtk.StringList.new([
+                _('Far left'),
+                _('Left'),
+                _('Left of the clock'),
+                _('Right of the clock'),
+                _('Right'),
+                _('Far right'),
+            ]),
         });
-        const currentBox = settings.get_string('panel-box');
-        boxRow.set_selected(Math.max(0, PANEL_BOXES.indexOf(currentBox)));
-        boxRow.connect('notify::selected', row => {
-            settings.set_string('panel-box', PANEL_BOXES[row.get_selected()]);
+        const currentPos = settings.get_string('panel-position');
+        posRow.set_selected(Math.max(0, PANEL_POSITIONS.indexOf(currentPos)));
+        posRow.connect('notify::selected', row => {
+            settings.set_string('panel-position', PANEL_POSITIONS[row.get_selected()]);
         });
-        panelGroup.add(boxRow);
-
-        const orderRow = new Adw.SpinRow({
-            title: _('Position order'),
-            subtitle: _('Index within the selected panel section'),
-            adjustment: new Gtk.Adjustment({
-                lower: 0,
-                upper: 20,
-                step_increment: 1,
-                page_increment: 1,
-            }),
-        });
-        settings.bind('panel-order', orderRow, 'value', Gio.SettingsBindFlags.DEFAULT);
-        panelGroup.add(orderRow);
+        panelGroup.add(posRow);
 
         // --- Appearance group ---
         const appGroup = new Adw.PreferencesGroup({
