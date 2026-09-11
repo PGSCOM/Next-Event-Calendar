@@ -1,48 +1,58 @@
 # Next Event Calendar
 
-Extensión de GNOME Shell que muestra en el panel superior el **próximo evento
-del día** con su hora. Cuando ya no quedan eventos con hora por delante hoy,
-el indicador **desaparece**. Al hacer clic se abre **GNOME Calendar**.
+GNOME Shell extension that shows your **next event of the day** with its time
+in the top panel. Once there are no more timed events left today, the
+indicator **disappears**. Clicking it opens **GNOME Calendar**.
 
-Lee los mismos datos que el calendario del reloj de GNOME (Evolution Data
-Server / Cuentas en línea), sin dependencias ni typelibs extra.
+It reads the same data as the GNOME clock's calendar (Evolution Data
+Server / Online Accounts), with no extra dependencies or typelibs.
 
----
-
-## Requisitos
-
-- GNOME Shell **47 a 50** (probado en 50; en 47–49 debería funcionar pero no
-  está verificado). El énfasis con el color de acento del sistema es 47+.
-- Al menos un calendario configurado en **Configuración → Cuentas en línea**
-  o en la app **GNOME Calendar**.
-- Herramientas de línea de comandos: `glib-compile-schemas` y
-  `gnome-extensions` (vienen con `gnome-shell`; en algunas distros el panel
-  de preferencias requiere `gnome-shell-extension-prefs`).
+**Available on extensions.gnome.org:**
+https://extensions.gnome.org/extension/10932/next-event-calendar/
 
 ---
 
-## Instalación
+## Requirements
 
-### Opción A — script (recomendada)
+- GNOME Shell **47 to 50** (tested on 50; 47–49 should work but are
+  unverified). Accent-color emphasis requires 47+.
+- At least one calendar configured in **Settings → Online Accounts** or in
+  the **GNOME Calendar** app.
+- Command-line tools: `glib-compile-schemas` and `gnome-extensions` (ship
+  with `gnome-shell`; on some distros the preferences panel needs
+  `gnome-shell-extension-prefs`).
+
+---
+
+## Installation
+
+### Option A — extensions.gnome.org (recommended)
+
+Install directly from https://extensions.gnome.org/extension/10932/next-event-calendar/
+using the toggle switch (requires the GNOME Shell integration browser
+extension).
+
+### Option B — script
 
 ```bash
-git clone <url-del-repo> Next-Event-Calendar
+git clone https://github.com/PGSCOM/Next-Event-Calendar.git
 cd Next-Event-Calendar
 ./install.sh enable
 ```
 
-Después **recarga GNOME Shell**:
+Then **reload GNOME Shell**:
 
-- **Wayland**: cierra sesión y vuelve a entrar (no hay otra forma).
-- **X11**: `Alt`+`F2`, escribe `r`, `Enter`.
+- **Wayland**: log out and log back in (no other way).
+- **X11**: `Alt`+`F2`, type `r`, `Enter`.
 
-Si tras reiniciar la sesión en Wayland sigue sin aparecer, actívala a mano:
+If it still doesn't show up after reloading a Wayland session, enable it by
+hand:
 
 ```bash
 gnome-extensions enable next-event-calendar@gnome-shell-extension
 ```
 
-### Opción B — manual
+### Option C — manual
 
 ```bash
 UUID=next-event-calendar@gnome-shell-extension
@@ -56,99 +66,79 @@ glib-compile-schemas "$DEST/schemas"
 gnome-extensions enable "$UUID"
 ```
 
-Luego recarga la shell (ver arriba).
+Then reload the shell (see above).
 
-### Opción C — desde zip
+### Option D — from zip
 
 ```bash
-./package.sh   # genera dist/next-event-calendar@gnome-shell-extension.shell-extension.zip
+./package.sh   # builds dist/next-event-calendar@gnome-shell-extension.shell-extension.zip
 gnome-extensions install --force \
   dist/next-event-calendar@gnome-shell-extension.shell-extension.zip
 ```
 
-Recarga la sesión y actívala con `gnome-extensions enable …`.
+Reload the session and enable it with `gnome-extensions enable …`.
 
 ---
 
-## Configuración
+## Configuration
 
 ```bash
 gnome-extensions prefs next-event-calendar@gnome-shell-extension
 ```
 
-O desde la app **Extensiones** → *Next Event Calendar* → engranaje. Hay dos páginas.
+Or from the **Extensions** app → *Next Event Calendar* → gear icon. There are
+two pages.
 
 **General**
 
-| Ajuste | Por defecto | Qué hace |
+| Setting | Default | What it does |
 |---|---|---|
-| Calendario | Todos | Muestra eventos solo de ese calendario de EDS |
-| Mostrar evento en curso | No | Sigue mostrando el evento mientras ocurre, en vez de saltar al siguiente |
-| Posición en el panel | Derecha | Extremo izq. / izquierda / a la izq. del reloj / a la der. del reloj / derecha / extremo der. |
-| Intervalo de refresco | 60 s | Cada cuánto se reevalúa el próximo evento |
+| Calendar | All | Only shows events from that EDS calendar |
+| Show event in progress | No | Keeps showing the event while it's happening, instead of jumping to the next one |
+| Panel position | Right | Far left / left / left of clock / right of clock / right / far right |
+| Refresh interval | 60 s | How often the next event is re-evaluated |
 
-**Apariencia**: un preajuste rápido más el detalle.
+**Appearance**: a quick preset plus fine detail.
 
-| Ajuste | Por defecto | Qué hace |
+| Setting | Default | What it does |
 |---|---|---|
-| Preajuste | *(según el resto)* | **Simple**: el aspecto plano de siempre. **Destacado**: jerarquía + acento + superficie. **Personalizado**: tu mezcla |
-| Formato de hora | Inteligente | Hora absoluta, cuenta atrás, o cuenta atrás solo cuando falta poco |
-| Jerarquía tipográfica | Sí | Hora en negrita con el título atenuado, en vez de una cadena plana con `·` |
-| Largo máx. de título | 35 | Trunca títulos más largos con `…` |
-| Hora con color de acento | Sí | Tiñe la hora con el acento del sistema cuando el evento está cerca |
-| Superficie tonal | Sí | Fondo tenue tras el widget cuando el evento es inminente |
-| Énfasis: cuándo | Según se acerca | Escalar según se acerca el evento, o aplicarlo siempre |
-| Umbrales | 15 / 5 min | Minutos a los que el evento cuenta como *pronto* y como *inminente* |
+| Preset | *(depends on the rest)* | **Simple**: the classic flat look. **Featured**: hierarchy + accent + surface. **Custom**: your own mix |
+| Time format | Smart | Absolute time, countdown, or countdown only when close |
+| Typographic hierarchy | Yes | Bold time with a dimmed title, instead of a flat `·`-separated string |
+| Max title length | 35 | Truncates longer titles with `…` |
+| Accent-colored time | Yes | Tints the time with the system accent color when the event is near |
+| Tonal surface | Yes | Dim background behind the widget when the event is imminent |
+| Emphasis: when | As it approaches | Scale up as the event gets closer, or always apply it |
+| Thresholds | 15 / 5 min | Minutes at which the event counts as *soon* and as *imminent* |
 
-Todos los cambios de apariencia y de calendario se aplican **sin recargar** la shell.
-La posición del panel también, salvo en Wayland la primera carga.
-
----
-
-## Cómo funciona
-
-- **Origen de datos**: `Calendar.DBusEventSource` de GNOME Shell — el mismo
-  agregador que usa el calendario del reloj. No hace login propio ni guarda
-  credenciales.
-- **Filtrado por calendario**: cada evento trae un id
-  `source_uid\ncomp_uid\nrid`; se compara la primera parte con el UID
-  elegido en preferencias.
-- **Refresco**: temporizador periódico + señal `changed` de EDS. En cada
-  refresco se pide el rango de hoy, se descartan los eventos ya pasados y los
-  de día completo, y se muestra el primero que queda.
-- **Preferencias**: la lista de calendarios se obtiene de Evolution Data
-  Server por D-Bus (`org.gnome.evolution.dataserver.Sources5`).
+All appearance and calendar changes apply **without reloading** the shell.
+Panel position too, except on the first load under Wayland.
 
 ---
 
-## Limitaciones conocidas
+## How it works
 
-- Depende de **dos APIs internas** de GNOME Shell (`DBusEventSource` y el
-  formato del id de evento). Son estables desde hace años, pero una versión
-  futura de GNOME podría romperlas.
-- Los **eventos de día completo no se muestran** (no tienen hora). Solo
-  cuentan los eventos de hoy con hora y que aún no han empezado.
-- El **selector de calendario** en preferencias lee EDS por D-Bus de forma
-  síncrona; si EDS cambia la versión del bus (`Sources5` → `Sources6`) la
-  lista puede quedar vacía y solo se ofrece «Todos los calendarios» (la
-  extensión sigue funcionando).
-- `uuid` y `url` son *placeholders* y no hay `LICENSE`: sirve para uso
-  personal, **no** para subir a extensions.gnome.org tal cual.
-
----
-
-## Solución de problemas
-
-| Síntoma | Causa / arreglo |
-|---|---|
-| No aparece en la lista de extensiones | La shell no se ha recargado. En Wayland hay que cerrar sesión y volver a entrar. |
-| Aparece activada pero no se ve nada en el panel | No hay eventos futuros con hora hoy (comportamiento correcto), o EDS aún está sincronizando: abre GNOME Calendar para forzar la sincronización y espera al siguiente refresco. |
-| Preferencias: el desplegable solo muestra «Todos los calendarios» | EDS no respondió por D-Bus. Comprueba `gnome-extensions prefs …` desde una terminal y revisa la salida; ver *Limitaciones conocidas*. |
-| Errores en el log | `journalctl --user -b -o cat /usr/bin/gnome-shell \| grep next-event` |
+- **Data source**: GNOME Shell's `Calendar.DBusEventSource` — the same
+  aggregator the clock's calendar uses. No custom login, no stored
+  credentials.
+- **Calendar filtering**: each event carries an id
+  `source_uid\ncomp_uid\nrid`; the first part is compared against the UID
+  chosen in preferences.
+- **Refresh**: a periodic timer plus EDS's `changed` signal. Each refresh
+  requests today's range, discards past and all-day events, and shows the
+  first one remaining.
+- **Preferences**: the calendar list is fetched from Evolution Data Server
+  over D-Bus (`org.gnome.evolution.dataserver.Sources5`).
 
 ---
 
-## Desinstalar
+## License
+
+[GPL-2.0-or-later](LICENSE).
+
+---
+
+## Uninstall
 
 ```bash
 gnome-extensions disable next-event-calendar@gnome-shell-extension
